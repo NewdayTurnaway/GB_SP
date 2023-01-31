@@ -18,7 +18,8 @@ public class TasksTest : MonoBehaviour
     {
         _cancellationTokenSource = new();
         var token = _cancellationTokenSource.Token;
-        await Task.WhenAll(Task1Async(token), Task2Async(token));
+        var isFirstFaster = await WhatTaskFasterAsync(token, Task1Async(token), Task2Async(token));
+        Debug.Log(isFirstFaster);
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
     }
@@ -42,5 +43,16 @@ public class TasksTest : MonoBehaviour
         }
 
         Debug.Log("Task2 Complete");
+    }
+
+    private async Task<bool> WhatTaskFasterAsync(CancellationToken ct, Task task1, Task task2)
+    {
+        if (ct.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        var finishedTask = await Task.WhenAny(task1, task2);
+        return finishedTask == task1;
     }
 }
