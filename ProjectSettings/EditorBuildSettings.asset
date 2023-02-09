@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Chat.unity
+    guid: 2cdd8aa3c30e4f84dbf42f6b683782d4
   m_configObjects: {}
