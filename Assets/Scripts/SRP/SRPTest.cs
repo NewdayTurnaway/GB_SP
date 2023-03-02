@@ -5,7 +5,7 @@ public class SRPTest : MonoBehaviour
 {
     [field: SerializeField] public RenderPipelineAsset RenderPipelineAsset { get; private set; }
 
-    private void Start()
+    private void Awake()
     {
         GraphicsSettings.renderPipelineAsset = RenderPipelineAsset;
         Debug.Log("SRP Enable");
