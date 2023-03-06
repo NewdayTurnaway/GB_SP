@@ -2,14 +2,11 @@ using Unity.Mathematics;
 using Unity.Burst;
 using Unity.Jobs;
 using UnityEngine;
-using UnityEngine.Jobs;
 using Random = UnityEngine.Random;
+using Unity.Collections;
 
 public class AsteroidBelt : MonoBehaviour
 {
-    private const int ROTATION_SPEED_CORRECTION = 1000;
-    private const int ORBIT_SPEED_CORRECTION = 10000;
-
     [Header("Spawner Settings")]
     [SerializeField] private GameObject _asteroidPrefab;
     [SerializeField, Min(1)] private int _density = 50;
@@ -26,47 +23,59 @@ public class AsteroidBelt : MonoBehaviour
     [SerializeField, Min(0)] private float _maxRotationSpeed = 1;
 
     private Transform[] _transforms;
-    private TransformAccessArray _transformAccessArray;
+    private NativeArray<Asteroid> _asteroids;
 
-    [BurstCompile]
-    private struct AsteroidRotateJob : IJobParallelForTransform
+    private struct Asteroid
     {
-        public float orbitSpeed;
-        public Vector3 parentPosition;
-        public Vector3 parentDirectionUp;
-        public float rotationSpeed;
-        public Vector3 rotationDirection;
-        public bool rotationClockwise;
-        public float deltaTime;
+        public float3 position;
+        public quaternion rotation;
+    }
 
-        public void Execute(int index, TransformAccess transform)
+    [BurstCompile(FloatPrecision.Standard, FloatMode.Fast, CompileSynchronously = true)]
+    private struct AsteroidRotateJob : IJobFor
+    {
+        [ReadOnly] public float3 parentPosition;
+        [ReadOnly] public float3 parentDirectionUp;
+        [ReadOnly] public float orbitSpeed;
+        [ReadOnly] public float rotationSpeed;
+        [ReadOnly] public float3 rotationDirection;
+        [ReadOnly] public bool rotationClockwise;
+        [ReadOnly] public float deltaTime;
+
+        public NativeArray<Asteroid> asteroids;
+
+        public void Execute(int index)
         {
+            var asteroid = asteroids[index];
+
             if (rotationClockwise)
             {
-                transform.position = 
+                asteroid.position = 
                     math.mul(
-                            quaternion.AxisAngle(parentDirectionUp, rotationSpeed / ROTATION_SPEED_CORRECTION * deltaTime),
-                            transform.position - parentPosition) + (float3)parentPosition;
+                            quaternion.AxisAngle(parentDirectionUp, orbitSpeed * deltaTime),
+                            asteroid.position - parentPosition) + parentPosition;
             }
             else
             {
-                transform.position =
+                asteroid.position =
                     math.mul(
-                            quaternion.AxisAngle(-parentDirectionUp, rotationSpeed / ROTATION_SPEED_CORRECTION * deltaTime),
-                            transform.position - parentPosition) + (float3)parentPosition;
+                            quaternion.AxisAngle(-parentDirectionUp, orbitSpeed * deltaTime),
+                            asteroid.position - parentPosition) + parentPosition;
             }
 
-            transform.rotation = 
+            asteroid.rotation = 
                 math.mul(
-                    transform.rotation, 
-                    quaternion.AxisAngle(rotationDirection, orbitSpeed / ORBIT_SPEED_CORRECTION * deltaTime));
+                    asteroid.rotation, 
+                    quaternion.AxisAngle(rotationDirection, rotationSpeed * deltaTime));
+
+            asteroids[index] = asteroid;
         }
     }
-
 
     private void Start()
     {
         _transforms = new Transform[_density];
+        var asteroids = new Asteroid[_density];
 
         Random.InitState(_seed);
 
@@ -83,39 +92,48 @@ public class AsteroidBelt : MonoBehaviour
             var worldOffset = transform.rotation * localPosition;
             var worldPosition = transform.position + worldOffset;
 
-            var _asteroid = Instantiate(_asteroidPrefab, worldPosition, Quaternion.Euler(Random.Range(0, 360), Random.Range(0, 360), Random.Range(0, 360)));
-            _asteroid.transform.SetParent(transform);
-            _transforms[i] = _asteroid.transform;
+            var asteroid = Instantiate(
+                _asteroidPrefab, 
+                worldPosition, 
+                Quaternion.Euler(Random.Range(0, 360), Random.Range(0, 360), Random.Range(0, 360)));
+            asteroid.transform.SetParent(transform);
+
+            _transforms[i] = asteroid.transform;
+            asteroids[i].position = asteroid.transform.position;
+            asteroids[i].rotation = asteroid.transform.rotation;
         }
 
-        _transformAccessArray = new TransformAccessArray(_transforms);
+        _asteroids = new NativeArray<Asteroid>(asteroids, Allocator.Persistent);
     }
 
     private void Update()
     {
         var jobHandle = default(JobHandle);
 
+        var job = new AsteroidRotateJob()
+        {
+            parentPosition = transform.position,
+            parentDirectionUp = transform.up,
+            orbitSpeed = Random.Range(_minOrbitSpeed, _maxOrbitSpeed),
+            rotationSpeed = Random.Range(_minRotationSpeed, _maxRotationSpeed),
+            rotationDirection = new(Random.Range(0, 360), Random.Range(0, 360), Random.Range(0, 360)),
+            rotationClockwise = _rotatingClockwise,
+            deltaTime = Time.deltaTime,
+            asteroids = _asteroids
+        };
+
+        jobHandle = job.ScheduleParallel(_density, 5, jobHandle);
+        jobHandle.Complete();
+
+
         for (int i = 0; i < _density; i++)
         {
-            var job = new AsteroidRotateJob()
-            {
-                parentPosition = transform.position,
-                parentDirectionUp = transform.up,
-                orbitSpeed = Random.Range(_minOrbitSpeed, _maxOrbitSpeed),
-                rotationSpeed = Random.Range(_minRotationSpeed, _maxRotationSpeed),
-                rotationDirection = new(Random.Range(0, 360), Random.Range(0, 360), Random.Range(0, 360)),
-                rotationClockwise = _rotatingClockwise,
-                deltaTime = Time.deltaTime
-            };
-
-            jobHandle = job.Schedule(_transformAccessArray);
+            _transforms[i].SetPositionAndRotation(_asteroids[i].position, _asteroids[i].rotation);
         }
-
-        jobHandle.Complete();
     }
 
     private void OnDisable()
     {
-        _transformAccessArray.Dispose();
+        _asteroids.Dispose();
     }
 }
