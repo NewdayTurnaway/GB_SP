@@ -239,14 +239,14 @@ MonoBehaviour:
   _asteroidPrefab: {fileID: 5125923538485080953, guid: 3197f925c7a9c984282829826ca76187, type: 3}
   _density: 100
   _seed: 0
-  _innerRadius: 25
-  _outerRadius: 25
-  _height: 5
+  _innerRadius: 50
+  _outerRadius: 100
+  _height: 15
   _rotatingClockwise: 1
-  _minOrbitSpeed: 1
-  _maxOrbitSpeed: 1.5
-  _minRotationSpeed: 1
-  _maxRotationSpeed: 1
+  _minOrbitSpeed: 0.1
+  _maxOrbitSpeed: 0.1
+  _minRotationSpeed: 0.01
+  _maxRotationSpeed: 0.01
 --- !u!4 &914691923
 Transform:
   m_ObjectHideFlags: 0
