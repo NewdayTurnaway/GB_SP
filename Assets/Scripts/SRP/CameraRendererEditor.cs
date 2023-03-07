@@ -4,9 +4,9 @@ using UnityEngine.Rendering;
 
 partial class CameraRenderer
 {
-    private partial void DrawUIInEditor();
-    private partial void DrawUnsupportedShaders();
-    private partial void DrawGizmos();
+    partial void DrawUIInEditor();
+    partial void DrawUnsupportedShaders();
+    partial void DrawGizmos();
 
 #if UNITY_EDITOR
 
@@ -22,7 +22,7 @@ partial class CameraRenderer
 
     private static readonly Material _errorMaterial = new(Shader.Find("Hidden/InternalErrorShader"));
 
-    private partial void DrawUIInEditor()
+    partial void DrawUIInEditor()
     {
         if (_camera.cameraType == CameraType.SceneView)
         {
@@ -30,7 +30,7 @@ partial class CameraRenderer
         }
     }
 
-    private partial void DrawUnsupportedShaders()
+    partial void DrawUnsupportedShaders()
     {
         var drawingSettings = new DrawingSettings
             (_legacyShaderTagIds[0], new(_camera)) { overrideMaterial = _errorMaterial };
@@ -44,7 +44,7 @@ partial class CameraRenderer
         _context.DrawRenderers(_cullingResults, ref drawingSettings, ref filteringSettings);
     }
 
-    private partial void DrawGizmos()
+    partial void DrawGizmos()
     {
         if (!Handles.ShouldRenderGizmos())
         {
