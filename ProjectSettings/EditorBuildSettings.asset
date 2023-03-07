@@ -11,7 +11,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/NGO.unity
     guid: 7a4a31636da3dcb49ac668f17d7723d9
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SpaceGame.unity
     guid: b1c10c05d8f92214ea00774295eb4d9b
+  - enabled: 1
+    path: Assets/Scenes/SolarSystemGame.unity
+    guid: 4fd3a2b692813f0488eb1c30a0b8d961
   m_configObjects: {}
